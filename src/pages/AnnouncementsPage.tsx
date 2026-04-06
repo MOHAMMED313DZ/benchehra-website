@@ -9,7 +9,7 @@ const AnnouncementsPage: React.FC = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("announcements").select("*").order("publish_date", { ascending: false }).then(({ data }) => setAnnouncements(data || []));
+    supabase.from("announcements").select("*").eq("is_active", true).order("publish_date", { ascending: false }).then(({ data }) => setAnnouncements(data || []));
   }, []);
 
   return (

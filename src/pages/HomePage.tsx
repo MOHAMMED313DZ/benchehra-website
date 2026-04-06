@@ -16,8 +16,8 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     supabase.from("activities").select("*").eq("is_active", true).limit(3).then(({ data }) => setActivities(data || []));
-    supabase.from("news").select("*").order("publish_date", { ascending: false }).limit(3).then(({ data }) => setNewsItems(data || []));
-    supabase.from("announcements").select("*").order("publish_date", { ascending: false }).limit(5).then(({ data }) => setAnnouncements(data || []));
+    supabase.from("news").select("*").eq("is_active", true).order("publish_date", { ascending: false }).limit(3).then(({ data }) => setNewsItems(data || []));
+    supabase.from("announcements").select("*").eq("is_active", true).order("publish_date", { ascending: false }).limit(5).then(({ data }) => setAnnouncements(data || []));
   }, []);
 
   const stats = [
