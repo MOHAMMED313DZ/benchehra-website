@@ -51,8 +51,9 @@ const AdminActivities: React.FC = () => {
       const { data: urlData } = supabase.storage.from("media").getPublicUrl(filePath);
       return urlData?.publicUrl || null;
     } catch (error: any) {
-      console.error("Upload error:", error.message);
-      toast.error(lang === "ar" ? "فشل رفع الصورة" : "Upload failed");
+      console.error("Upload error details:", error);
+      const errorMsg = error.message || (lang === "ar" ? "فشل الرفع" : "Upload failed");
+      toast.error(errorMsg);
       return null;
     }
   };
