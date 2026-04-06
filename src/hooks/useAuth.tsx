@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, useCallback } from "react";
+import { useState, useEffect, createContext, useContext, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -19,17 +19,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const isInitialized = useRef(false);
 
   const checkAdmin = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase.rpc("is_admin", { _user_id: userId });
+      console.log("AuthProvider: Checking admin status for", userId);
+      // Timeout the RPC call to prevent platform hanging
+      const rpcPromise = supabase.rpc("is_admin", { _user_id: userId });
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("RPC Timeout")), 3000));
+      
+      const { data, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
+      
       if (error) {
         console.error("checkAdmin error:", error.message);
         return false;
       }
       return !!data;
     } catch (err) {
-      console.error("checkAdmin exception:", err);
+      console.error("checkAdmin failure:", err);
       return false;
     }
   }, []);
@@ -45,27 +52,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [checkAdmin]);
 
   useEffect(() => {
-    // 1. Initial session check
+    if (isInitialized.current) return;
+    isInitialized.current = true;
+
+    // Failsafe: Ensure loading is ALWAYS false after 5 seconds
+    const failsafe = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
     const init = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          const admin = await checkAdmin(session.user.id);
+        console.log("AuthProvider: Initializing session...");
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        
+        if (initialSession?.user) {
+          const admin = await checkAdmin(initialSession.user.id);
           setIsAdmin(admin);
         }
       } catch (err) {
-        console.error("Auth init error:", err);
+        console.error("Auth initialization failed:", err);
       } finally {
         setLoading(false);
+        clearTimeout(failsafe);
       }
     };
 
     init();
 
-    // 2. Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log("Auth Event:", event);
       setSession(newSession);
       setUser(newSession?.user ?? null);
       
@@ -76,17 +93,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAdmin(false);
       }
       
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        setLoading(false);
-      }
-      
-      if (event === 'SIGNED_OUT') {
-        setIsAdmin(false);
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(failsafe);
+    };
   }, [checkAdmin]);
 
   const signIn = async (email: string, password: string) => {
