@@ -4,7 +4,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Dumbbell, Newspaper, Megaphone, Users, MessageSquare,
-  ClipboardList, AlertTriangle, LogOut, Globe, Menu, X, Image
+  ClipboardList, AlertTriangle, LogOut, Globe, Menu, X, Image, ShieldCheck
 } from "lucide-react";
 import AdminActivities from "./AdminActivities";
 import AdminNews from "./AdminNews";
@@ -14,6 +14,7 @@ import AdminTestimonials from "./AdminTestimonials";
 import AdminRegistrations from "./AdminRegistrations";
 import AdminReports from "./AdminReports";
 import AdminGallery from "./AdminGallery";
+import AdminRoles from "./AdminRoles";
 
 const sections = [
   { key: "activities", icon: Dumbbell, labelAr: "الأنشطة", labelEn: "Activities" },
@@ -24,6 +25,7 @@ const sections = [
   { key: "testimonials", icon: MessageSquare, labelAr: "الشهادات", labelEn: "Testimonials" },
   { key: "registrations", icon: ClipboardList, labelAr: "التسجيلات", labelEn: "Registrations" },
   { key: "reports", icon: AlertTriangle, labelAr: "البلاغات", labelEn: "Reports" },
+  { key: "roles", icon: ShieldCheck, labelAr: "الصلاحيات", labelEn: "Permissions" },
 ];
 
 const AdminDashboard: React.FC = () => {
@@ -56,6 +58,7 @@ const AdminDashboard: React.FC = () => {
       case "testimonials": return <AdminTestimonials />;
       case "registrations": return <AdminRegistrations />;
       case "reports": return <AdminReports />;
+      case "roles": return <AdminRoles />;
       default: return <AdminActivities />;
     }
   };
@@ -103,7 +106,7 @@ const AdminDashboard: React.FC = () => {
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-all font-bold"
           >
             <LogOut className="w-4 h-4" />
             {lang === "ar" ? "تسجيل الخروج" : "Sign Out"}
