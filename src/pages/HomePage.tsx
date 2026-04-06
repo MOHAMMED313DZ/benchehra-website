@@ -5,6 +5,7 @@ import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, ArrowLeft, ArrowRight, Trophy, Users, Dumbbell } from "lucide-react";
+import AdBanner from "@/components/AdBanner";
 
 const HomePage: React.FC = () => {
   const { lang, t, dir } = useLanguage();
@@ -23,7 +24,7 @@ const HomePage: React.FC = () => {
   const stats = [
     { icon: Trophy, valueAr: "+500", valueEn: "500+", labelAr: "رياضي مسجل", labelEn: "Registered Athletes" },
     { icon: Dumbbell, valueAr: "+6", valueEn: "6+", labelAr: "أنشطة رياضية", labelEn: "Sports Activities" },
-    { icon: Users, valueAr: "+10", valueEn: "10+", labelAr: "مدرب محترف", labelEn: "Professional Coaches" },
+    { icon: Users, valueAr: "+5", valueEn: "5+", labelAr: "مدرب محترف", labelEn: "Professional Coaches" },
   ];
 
   return (
@@ -54,6 +55,11 @@ const HomePage: React.FC = () => {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Hero Ad Banner */}
+      <section className="container mx-auto px-4 mt-12 mb-4">
+        <AdBanner placement="homepage_banner" />
       </section>
 
       {/* Stats */}
