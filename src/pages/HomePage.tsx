@@ -22,7 +22,7 @@ const HomePage: React.FC = () => {
 
   const stats = [
     { icon: Trophy, valueAr: "+500", valueEn: "500+", labelAr: "رياضي مسجل", labelEn: "Registered Athletes" },
-    { icon: Dumbbell, valueAr: "6", valueEn: "6+", labelAr: "أنشطة رياضية", labelEn: "Sports Activities" },
+    { icon: Dumbbell, valueAr: "+6", valueEn: "6+", labelAr: "أنشطة رياضية", labelEn: "Sports Activities" },
     { icon: Users, valueAr: "+10", valueEn: "10+", labelAr: "مدرب محترف", labelEn: "Professional Coaches" },
   ];
 
