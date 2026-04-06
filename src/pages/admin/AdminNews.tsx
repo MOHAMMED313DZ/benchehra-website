@@ -19,11 +19,13 @@ const AdminNews: React.FC = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.from("news").select("*").order("publish_date", { ascending: false });
       if (error) throw error;
       setItems(data || []);
     } catch (error: any) {
       console.error("Fetch news error:", error.message);
+      toast.error(lang === "ar" ? "فشل تحميل البيانات" : "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -54,15 +56,29 @@ const AdminNews: React.FC = () => {
     if (!file) return;
     setUploading(true);
     const url = await uploadImage(file);
-    if (url) setEditing({ ...editing, featured_image_url: url });
+    if (url) {
+      setEditing(prev => ({ ...prev, featured_image_url: url }));
+      toast.success(lang === "ar" ? "تم رفع الصورة" : "Image uploaded");
+    }
     setUploading(false);
   };
 
   const save = async () => {
-    if (!editing.title_ar || !editing.title_en) { toast.error(lang === "ar" ? "العنوان مطلوب" : "Title required"); return; }
+    if (!editing.title_ar || !editing.title_en) { 
+      toast.error(lang === "ar" ? "العنوان مطلوب" : "Title required"); 
+      return; 
+    }
+    
     setSaving(true);
+    console.log("Saving news started...", editing);
+    
     try {
-      const payload = { title_ar: editing.title_ar, title_en: editing.title_en, content_ar: editing.content_ar || "", content_en: editing.content_en || "", featured_image_url: editing.featured_image_url || null };
+      const payload = { 
+        title_ar: editing.title_ar, title_en: editing.title_en, 
+        content_ar: editing.content_ar || "", content_en: editing.content_en || "", 
+        featured_image_url: editing.featured_image_url || null 
+      };
+
       if (isNew) {
         const { error } = await supabase.from("news").insert([payload]);
         if (error) throw error;
@@ -70,95 +86,136 @@ const AdminNews: React.FC = () => {
         const { error } = await supabase.from("news").update(payload).eq("news_id", editing.news_id);
         if (error) throw error;
       }
+      
+      console.log("Database operation successful");
       toast.success(lang === "ar" ? "تم الحفظ بنجاح" : "Saved successfully");
-      setEditing(null); setIsNew(false); fetchData();
+      
+      // Clear state FIRST to unmount form immediately
+      setEditing(null);
+      setIsNew(false);
+      
+      // Refresh in background
+      fetchData();
     } catch (error: any) {
-      toast.error(error.message);
-      console.error("Save news error:", error);
+      console.error("Save news error details:", error);
+      toast.error(error.message || (lang === "ar" ? "حدث خطأ أثناء الحفظ" : "Error saving"));
     } finally {
+      console.log("Saving news lifecycle finished");
       setSaving(false);
     }
   };
 
   const remove = async (id: number) => {
-    if (!confirm(lang === "ar" ? "هل أنت متأكد؟" : "Are you sure?")) return;
+    if (!confirm(lang === "ar" ? "هل أنت متأكد من الحذف؟" : "Are you sure you want to delete?")) return;
     try {
       const { error } = await supabase.from("news").delete().eq("news_id", id);
       if (error) throw error;
-      toast.success(lang === "ar" ? "تم الحذف" : "Deleted"); fetchData();
+      toast.success(lang === "ar" ? "تم الحذف بنجاح" : "Deleted successfully"); 
+      fetchData();
     } catch (error: any) {
+      console.error("Delete news error:", error.message);
       toast.error(error.message);
     }
   };
 
   if (editing) {
     return (
-      <div className="max-w-2xl mx-auto bg-card rounded-xl p-6 card-shadow border border-primary/10">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-bold text-lg">{isNew ? (lang === "ar" ? "إضافة خبر" : "Add News") : (lang === "ar" ? "تعديل الخبر" : "Edit News")}</h2>
-          <button type="button" onClick={() => { setEditing(null); setIsNew(false); }} className="p-1 hover:bg-muted rounded"><X className="w-5 h-5" /></button>
+      <div className="max-w-2xl mx-auto bg-card rounded-2xl p-8 card-shadow border border-primary/10 transition-all duration-300">
+        <div className="flex items-center justify-between mb-8 pb-4 border-b">
+          <h2 className="font-bold text-xl tracking-tight">{isNew ? (lang === "ar" ? "إضافة خبر جديد" : "Add New Post") : (lang === "ar" ? "تعديل الخبر" : "Edit Post")}</h2>
+          <button type="button" onClick={() => { setEditing(null); setIsNew(false); }} className="p-2 hover:bg-muted rounded-full transition-colors"><X className="w-5 h-5" /></button>
         </div>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium mb-1">{lang === "ar" ? "العنوان (عربي)" : "Title (AR)"}</label><Input value={editing.title_ar} onChange={(e) => setEditing({ ...editing, title_ar: e.target.value })} /></div>
-            <div><label className="block text-sm font-medium mb-1">{lang === "ar" ? "العنوان (إنجليزي)" : "Title (EN)"}</label><Input value={editing.title_en} onChange={(e) => setEditing({ ...editing, title_en: e.target.value })} dir="ltr" /></div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><label className="block text-sm font-bold text-muted-foreground mb-2">{lang === "ar" ? "العنوان (عربي)" : "Title (AR)"}</label><Input value={editing.title_ar} onChange={(e) => setEditing({ ...editing, title_ar: e.target.value })} className="h-11" /></div>
+            <div><label className="block text-sm font-bold text-muted-foreground mb-2">{lang === "ar" ? "العنوان (إنجليزي)" : "Title (EN)"}</label><Input value={editing.title_en} onChange={(e) => setEditing({ ...editing, title_en: e.target.value })} dir="ltr" className="h-11" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium mb-1">{lang === "ar" ? "المحتوى (عربي)" : "Content (AR)"}</label><Textarea rows={5} value={editing.content_ar || ""} onChange={(e) => setEditing({ ...editing, content_ar: e.target.value })} /></div>
-            <div><label className="block text-sm font-medium mb-1">{lang === "ar" ? "المحتوى (إنجليزي)" : "Content (EN)"}</label><Textarea rows={5} value={editing.content_en || ""} onChange={(e) => setEditing({ ...editing, content_en: e.target.value })} dir="ltr" /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><label className="block text-sm font-bold text-muted-foreground mb-2">{lang === "ar" ? "المحتوى (عربي)" : "Content (AR)"}</label><Textarea rows={6} value={editing.content_ar || ""} onChange={(e) => setEditing({ ...editing, content_ar: e.target.value })} /></div>
+            <div><label className="block text-sm font-bold text-muted-foreground mb-2">{lang === "ar" ? "المحتوى (إنجليزي)" : "Content (EN)"}</label><Textarea rows={6} value={editing.content_en || ""} onChange={(e) => setEditing({ ...editing, content_en: e.target.value })} dir="ltr" /></div>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">{lang === "ar" ? "الصورة البارزة" : "Featured Image"}</label>
-            <div className="space-y-2">
-              <div className="relative">
-                <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" disabled={uploading} />
-                <div className={`p-4 border-2 border-dashed rounded-lg text-center ${uploading ? "opacity-50" : "hover:border-primary hover:bg-primary/5 cursor-pointer"}`}>
-                  <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{uploading ? (lang === "ar" ? "جارٍ الرفع..." : "Uploading...") : (lang === "ar" ? "رفع صورة من الجهاز" : "Upload from device")}</span>
+          <div className="bg-muted/30 p-6 rounded-2xl space-y-4">
+            <label className="block text-sm font-bold text-muted-foreground">{lang === "ar" ? "الصورة البارزة" : "Featured Image"}</label>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <input type="file" accept="image/*" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" disabled={uploading || saving} title="Upload Image" />
+                <div className={`p-6 border-2 border-dashed rounded-xl text-center transition-all ${uploading ? "bg-muted animate-pulse" : "hover:border-primary hover:bg-primary/5 cursor-pointer"}`}>
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-primary/50" />
+                  <span className="text-xs font-medium text-muted-foreground block">{uploading ? (lang === "ar" ? "جارٍ الرفع..." : "Uploading...") : (lang === "ar" ? "اختر صورة لرفعها" : "Choose image to upload")}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2"><div className="flex-1 border-t" /><span className="text-[10px] text-muted-foreground font-bold">{lang === "ar" ? "أو" : "OR"}</span><div className="flex-1 border-t" /></div>
-              <Input value={editing.featured_image_url || ""} onChange={(e) => setEditing({ ...editing, featured_image_url: e.target.value })} dir="ltr" placeholder="https://example.com/image.jpg" />
-              {editing.featured_image_url && <img src={editing.featured_image_url} alt="Preview" className="mt-2 h-40 w-full object-cover rounded-lg border shadow-sm" />}
+              <div className="flex-1">
+                <Input value={editing.featured_image_url || ""} onChange={(e) => setEditing({ ...editing, featured_image_url: e.target.value })} dir="ltr" placeholder="Image URL (Alternative)" className="text-xs h-full" disabled={uploading || saving} />
+              </div>
             </div>
+            {editing.featured_image_url && <div className="relative aspect-video rounded-xl overflow-hidden border bg-black/5"><img src={editing.featured_image_url} alt="Preview" className="w-full h-full object-cover" /><button type="button" onClick={() => setEditing({...editing, featured_image_url: ""})} className="absolute top-2 right-2 bg-destructive text-white p-1.5 rounded-full shadow-lg opacity-80 hover:opacity-100 transition-all"><X className="w-4 h-4" /></button></div>}
           </div>
-          <Button type="button" onClick={save} className="w-full" disabled={saving || uploading}>
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? (lang === "ar" ? "جارٍ الحفظ..." : "Saving...") : (lang === "ar" ? "حفظ" : "Save")}
-          </Button>
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={() => { setEditing(null); setIsNew(false); }} className="flex-1 py-6 rounded-xl" disabled={saving || uploading}>{lang === "ar" ? "إلغاء" : "Cancel"}</Button>
+            <Button type="button" onClick={save} className="flex-[2] py-6 rounded-xl shadow-lg shadow-primary/20" disabled={saving || uploading}>
+              {saving ? <><span className="animate-spin mr-2">⏳</span> {lang === "ar" ? "جارٍ الحفظ..." : "Saving..."}</> : <><Save className="w-5 h-5 mr-2" /> {lang === "ar" ? "نشر الخبر" : "Publish News"}</>}
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <p className="text-muted-foreground text-sm">{items.length} {lang === "ar" ? "خبر" : "news items"}</p>
-        <Button type="button" onClick={() => { setEditing({ title_ar: "", title_en: "", content_ar: "", content_en: "", featured_image_url: "" }); setIsNew(true); }}><Plus className="w-4 h-4 mr-2" />{lang === "ar" ? "إضافة" : "Add"}</Button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center bg-card p-4 rounded-2xl card-shadow">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 p-2 rounded-lg"><Save className="w-5 h-5 text-primary" /></div>
+          <div>
+            <h3 className="font-bold text-foreground">{lang === "ar" ? "الأخبار والمستجدات" : "News & Updates"}</h3>
+            <p className="text-xs text-muted-foreground">{items.length} {lang === "ar" ? "خبر منشور" : "published news"}</p>
+          </div>
+        </div>
+        <Button type="button" onClick={() => { setEditing({ title_ar: "", title_en: "", content_ar: "", content_en: "", featured_image_url: "" }); setIsNew(true); }} className="rounded-xl shadow-lg shadow-primary/10">
+          <Plus className="w-4 h-4 mr-2" /> {lang === "ar" ? "إضافة خبر" : "Add News"}
+        </Button>
       </div>
-      {loading ? <p className="text-center py-10 opacity-50">Loading...</p> : (
-        <div className="bg-card rounded-xl card-shadow overflow-hidden">
+
+      {loading && items.length === 0 ? (
+        <div className="py-20 text-center"><div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" /><p className="text-muted-foreground">{lang === "ar" ? "جارٍ التحميل..." : "Loading news..."}</p></div>
+      ) : (
+        <div className="bg-card rounded-2xl card-shadow overflow-hidden border border-primary/5">
           <Table>
-            <TableHeader><TableRow>
-              <TableHead>{lang === "ar" ? "العنوان" : "Title"}</TableHead>
-              <TableHead>{lang === "ar" ? "التاريخ" : "Date"}</TableHead>
-              <TableHead></TableHead>
-            </TableRow></TableHeader>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead>{lang === "ar" ? "الصورة" : "Image"}</TableHead>
+                <TableHead>{lang === "ar" ? "العنوان" : "Title"}</TableHead>
+                <TableHead>{lang === "ar" ? "التاريخ" : "Date"}</TableHead>
+                <TableHead className="text-right">{lang === "ar" ? "إجراءات" : "Actions"}</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {items.map((item) => (
-                <TableRow key={item.news_id}>
-                  <TableCell className="font-medium">{lang === "ar" ? item.title_ar : item.title_en}</TableCell>
-                  <TableCell dir="ltr" className="text-xs text-muted-foreground">{item.publish_date?.split("T")[0]}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => setEditing(item)} className="p-1 hover:bg-muted rounded transition-colors text-muted-foreground hover:text-foreground"><Pencil className="w-4 h-4" /></button>
-                      <button type="button" onClick={() => remove(item.news_id)} className="p-1 hover:bg-destructive/10 rounded text-destructive transition-colors"><Trash2 className="w-4 h-4" /></button>
+                <TableRow key={item.news_id} className="hover:bg-muted/30 transition-colors">
+                  <TableCell className="py-4">
+                    <img 
+                      src={item.featured_image_url || "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=100&h=100&fit=crop"} 
+                      alt="" 
+                      className="w-12 h-12 object-cover rounded-xl shadow-sm border border-muted" 
+                    />
+                  </TableCell>
+                  <TableCell className="font-bold max-w-[300px] truncate">{lang === "ar" ? item.title_ar : item.title_en}</TableCell>
+                  <TableCell className="text-xs font-bold text-muted-foreground" dir="ltr">{item.publish_date?.split("T")[0]}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-2 justify-end">
+                      <button type="button" onClick={() => setEditing(item)} className="p-2 hover:bg-primary/10 hover:text-primary rounded-xl transition-all"><Pencil className="w-4 h-4" /></button>
+                      <button type="button" onClick={() => remove(item.news_id)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
-              {items.length === 0 && <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground opacity-50">{lang === "ar" ? "لا توجد أخبار" : "No news items found"}</TableCell></TableRow>}
+              {items.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-20 text-muted-foreground opacity-50 italic">
+                    {lang === "ar" ? "لا توجد أخبار منشورة بعد" : "No news published yet"}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
