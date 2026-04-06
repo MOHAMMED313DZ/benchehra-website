@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Dumbbell, Newspaper, Megaphone, Users, MessageSquare,
   ClipboardList, AlertTriangle, LogOut, Globe, Menu, X, Image, ShieldCheck
@@ -35,18 +35,33 @@ const AdminDashboard: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Robust redirect logic using useEffect instead of direct render-level redirection
+  useEffect(() => {
+    if (!loading && !isAdmin) {
+      console.log("Admin Log: Not admin or session lost. Redirecting to login...");
+      navigate("/admin/login", { replace: true });
+    }
+  }, [loading, isAdmin, navigate]);
+
   const handleSignOut = async () => {
     try {
+      console.log("Admin Log: Signing out manually...");
       await signOut();
-      navigate("/admin/login");
+      navigate("/admin/login", { replace: true });
     } catch (error) {
       console.error("Sign out error:", error);
-      navigate("/admin/login");
+      navigate("/admin/login", { replace: true });
     }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
-  if (!isAdmin) return <Navigate to="/admin/login" replace />;
+  if (loading) {
+     return <div className="min-h-screen flex items-center justify-center bg-background"><div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  }
+
+  // Pre-check for admin status before rendering sensitive dashboard shell
+  if (!isAdmin) {
+    return null;
+  }
 
   const renderContent = () => {
     switch (active) {
